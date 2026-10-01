@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f5f6f4" />
+  <title>Parkwise | Smart parking, without the search</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body>
+  <video class="site-background-video" autoplay muted loop playsinline preload="auto" aria-hidden="true">
+    <source src="123456789.mp4" type="video/mp4" />
+  </video>
+  <div class="site-background-shade" aria-hidden="true"></div>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <div class="brand-row">
+        <div class="brand-mark"><i data-lucide="orbit"></i></div>
+        <span>parkwise<span class="brand-dot">.</span></span>
+      </div>
+
+      <div class="profile-card">
+        <div class="avatar">AM</div>
+        <div>
+          <strong>MONI</strong>
+          <span>Personal account</span>
+        </div>
+        <button class="icon-button subtle" aria-label="Open profile menu"><i data-lucide="chevron-down"></i></button>
+      </div>
+
+      <nav class="main-nav">
+        <p class="nav-label">Workspace</p>
+        <button class="nav-item active" data-view="overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></button>
+        <button class="nav-item" data-view="find"><i data-lucide="map-pin"></i><span>Find parking</span></button>
+        <button class="nav-item" data-view="activity"><i data-lucide="receipt-text"></i><span>My activity</span><span class="nav-count">2</span></button>
+        <p class="nav-label nav-label-spaced">Manage</p>
+        <button class="nav-item" data-view="admin"><i data-lucide="sliders-horizontal"></i><span>Admin console</span></button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="help-card">
+          <div class="help-icon"><i data-lucide="headphones"></i></div>
+          <strong>Need a hand?</strong>
+          <span>Our parking team is online.</span>
+          <button class="text-button">Contact support <i data-lucide="arrow-up-right"></i></button>
+        </div>
+        <button class="nav-item"><i data-lucide="settings-2"></i><span>Settings</span></button>
+        <button class="nav-item"><i data-lucide="log-out"></i><span>Sign out</span></button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button class="mobile-menu icon-button" aria-label="Open navigation"><i data-lucide="menu"></i></button>
+        <div class="breadcrumb"><span>Workspace</span><i data-lucide="chevron-right"></i><strong id="breadcrumbCurrent">Overview</strong></div>
+        <div class="topbar-actions">
+          <button class="icon-button notification-button" aria-label="Notifications"><i data-lucide="bell"></i><span></span></button>
+          <div class="online-status"><span></span> System online</div>
+        </div>
+      </header>
+
+      <section class="view active" id="overviewView">
+        <div class="welcome-row">
+          <div>
+            <p class="eyebrow">Wednesday, September 23, 2026</p>
+            <h1>Good morning, MONI<span class="accent">.</span></h1>
+            <p class="lede">Your parking, already one step ahead.</p>
+          </div>
+          <button class="outline-button" data-view-target="find"><i data-lucide="plus"></i> New booking</button>
+        </div>
+
+        <div class="metric-grid">
+          <article class="metric-card metric-main">
+            <div class="metric-top"><span class="metric-label">Next booking</span><span class="status-pill orange"><span></span> Confirmed</span></div>
+            <div class="metric-main-content">
+              <div>
+                <h2 id="nextBookingTitle">Today, 10:30 AM</h2>
+                <p id="nextBookingLocation">Central Station Garage · Level B2</p>
+                <span class="booking-code">PW-2841 <button class="copy-button" aria-label="Copy booking code"><i data-lucide="copy"></i></button></span>
+              </div>
+              <div class="parking-spot-big"><span>B2</span><strong id="nextBookingSpot">A-24</strong></div>
+            </div>
+            <div class="metric-footer"><span><i data-lucide="clock-3"></i> 2 hr reservation</span><button class="text-button">View details <i data-lucide="arrow-up-right"></i></button></div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-top"><span class="metric-label">This month</span><i class="metric-icon" data-lucide="trending-up"></i></div>
+            <div class="metric-value">08 <small>bookings</small></div>
+            <div class="metric-caption positive"><i data-lucide="arrow-up-right"></i> 12% from last month</div>
+            <div class="mini-bars" aria-hidden="true"><span style="height:30%"></span><span style="height:44%"></span><span style="height:37%"></span><span style="height:62%"></span><span style="height:54%"></span><span style="height:78%"></span><span style="height:68%"></span><span style="height:92%"></span></div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-top"><span class="metric-label">Time saved</span><i class="metric-icon" data-lucide="timer"></i></div>
+            <div class="metric-value">3.4 <small>hours</small></div>
+            <div class="metric-caption">Since you joined in June</div>
+            <div class="progress-line"><span style="width:68%"></span></div>
+            <div class="progress-label"><span>Parking smarter</span><strong>68%</strong></div>
+          </article>
+        </div>
+
+        <div class="section-heading"><div><h2>Find your spot</h2><p>Real-time availability from your favourite locations.</p></div><button class="text-button" data-view-target="find">View all locations <i data-lucide="arrow-up-right"></i></button></div>
+        <div class="location-grid">
+          <article class="location-card featured-location" data-location="bus">
+            <div class="location-visual bus-visual"><span class="visual-tag"><i data-lucide="bus-front"></i> Best availability</span><span class="visual-stamp">12<span>min</span></span></div>
+            <div class="location-body"><div><h3>Vijayawada Bus Stop</h3><p><i data-lucide="map-pin"></i> Pandit Nehru Bus Station · 0.4 km</p></div><div class="availability"><strong>64</strong><span>open spots</span></div></div>
+            <div class="location-bottom"><span class="small-status"><span class="green-dot"></span> Live availability</span><button class="circle-arrow select-location" aria-label="Select Vijayawada Bus Stop"><i data-lucide="arrow-up-right"></i></button></div>
+          </article>
+          <article class="location-card" data-location="railway">
+            <div class="location-visual railway-visual"><span class="visual-tag light"><i data-lucide="train-front"></i> Connected</span><span class="visual-stamp">8<span>min</span></span></div>
+            <div class="location-body"><div><h3>Vijayawada Railway Station</h3><p><i data-lucide="map-pin"></i> Railway Station Road · 0.7 km</p></div><div class="availability"><strong>48</strong><span>open spots</span></div></div>
+            <div class="location-bottom"><span class="small-status"><span class="green-dot"></span> Live availability</span><button class="circle-arrow select-location" aria-label="Select Vijayawada Railway Station"><i data-lucide="arrow-up-right"></i></button></div>
+          </article>
+          <article class="location-card" data-location="parks">
+            <div class="location-visual parks-visual"><span class="visual-tag light"><i data-lucide="trees"></i> Green escape</span><span class="visual-stamp">15<span>min</span></span></div>
+            <div class="location-body"><div><h3>Vijayawada Parks</h3><p><i data-lucide="map-pin"></i> Bhavanipuram Riverside · 1.1 km</p></div><div class="availability"><strong>82</strong><span>open spots</span></div></div>
+            <div class="location-bottom"><span class="small-status"><span class="green-dot"></span> Live availability</span><button class="circle-arrow select-location" aria-label="Select Vijayawada Parks"><i data-lucide="arrow-up-right"></i></button></div>
+          </article>
+          <article class="location-card" data-location="malls">
+            <div class="location-visual malls-visual"><span class="visual-tag light"><i data-lucide="shopping-bag"></i> Popular</span><span class="visual-stamp">11<span>min</span></span></div>
+            <div class="location-body"><div><h3>Vijayawada Malls</h3><p><i data-lucide="map-pin"></i> MG Road Shopping District · 1.5 km</p></div><div class="availability"><strong>36</strong><span>open spots</span></div></div>
+            <div class="location-bottom"><span class="small-status"><span class="amber-dot"></span> Filling up</span><button class="circle-arrow select-location" aria-label="Select Vijayawada Malls"><i data-lucide="arrow-up-right"></i></button></div>
+          </article>
+          <article class="location-card" data-location="restaurants">
+            <div class="location-visual restaurants-visual"><span class="visual-tag light"><i data-lucide="utensils"></i> Dinner ready</span><span class="visual-stamp">6<span>min</span></span></div>
+            <div class="location-body"><div><h3>Vijayawada Restaurants</h3><p><i data-lucide="map-pin"></i> Benz Circle Food Street · 1.9 km</p></div><div class="availability"><strong>27</strong><span>open spots</span></div></div>
+            <div class="location-bottom"><span class="small-status"><span class="amber-dot"></span> Filling up</span><button class="circle-arrow select-location" aria-label="Select Vijayawada Restaurants"><i data-lucide="arrow-up-right"></i></button></div>
+          </article>
+        </div>
+
+        <section class="city-availability panel">
+          <div class="panel-heading city-heading"><div><p class="eyebrow">Vijayawada city network</p><h2>Nearby parking availability</h2><p>Live slot status across popular destinations.</p></div><span class="live-label"><span></span> Live now</span></div>
+          <div class="google-map-wrap"><iframe title="Google Map of Vijayawada parking locations" src="https://www.google.com/maps?q=Vijayawada%2C%20Andhra%20Pradesh&z=13&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe><a class="map-open-link" href="https://www.google.com/maps/search/parking+near+Vijayawada" target="_blank" rel="noreferrer"><i data-lucide="map"></i> Open in Google Maps</a></div>
+           <div class="city-map"><div class="map-road road-a"></div><div class="map-road road-b"></div><div class="map-route"></div><span class="map-label label-pvp">PVP Mall</span><span class="map-label label-trendset">TrendSet Mall</span><span class="map-label label-klu">KLU University</span><span class="map-label label-pvr">PVR Mall</span><span class="map-label label-inox">INOX Mall</span><span class="map-pin map-pin-pvp"><i data-lucide="map-pin"></i></span><span class="map-pin map-pin-trendset"><i data-lucide="map-pin"></i></span><span class="map-pin map-pin-klu"><i data-lucide="graduation-cap"></i></span><span class="map-pin map-pin-pvr"><i data-lucide="film"></i></span><span class="map-pin map-pin-inox"><i data-lucide="film"></i></span></div>
+          <div class="city-location-list">
+            <div class="city-location-row"><div class="city-location-name"><strong>PVP Mall</strong><span>MG Road</span></div><div class="city-availability-bar"><span><i style="width:72%"></i></span></div><div class="city-rent"><strong>₹80</strong><span>per hour</span></div><div class="city-slots"><strong>86</strong><span>open</span></div><span class="small-status"><span class="green-dot"></span> Available</span></div>
+            <div class="city-location-row"><div class="city-location-name"><strong>TrendSet Mall</strong><span>Benz Circle</span></div><div class="city-availability-bar"><span><i style="width:48%"></i></span></div><div class="city-rent"><strong>₹100</strong><span>per hour</span></div><div class="city-slots"><strong>39</strong><span>open</span></div><span class="small-status"><span class="amber-dot"></span> Filling up</span></div>
+            <div class="city-location-row"><div class="city-location-name"><strong>KLU University</strong><span>Green Fields</span></div><div class="city-availability-bar"><span><i style="width:84%"></i></span></div><div class="city-rent"><strong>₹50</strong><span>per hour</span></div><div class="city-slots"><strong>124</strong><span>open</span></div><span class="small-status"><span class="green-dot"></span> Available</span></div>
+            <div class="city-location-row"><div class="city-location-name"><strong>PVR Mall</strong><span>Eluru Road</span></div><div class="city-availability-bar"><span><i style="width:61%"></i></span></div><div class="city-rent"><strong>₹90</strong><span>per hour</span></div><div class="city-slots"><strong>57</strong><span>open</span></div><span class="small-status"><span class="green-dot"></span> Available</span></div>
+            <div class="city-location-row"><div class="city-location-name"><strong>INOX Mall</strong><span>Ramachandra Nagar</span></div><div class="city-availability-bar"><span><i style="width:34%"></i></span></div><div class="city-rent"><strong>₹120</strong><span>per hour</span></div><div class="city-slots"><strong>28</strong><span>open</span></div><span class="small-status"><span class="amber-dot"></span> Filling up</span></div>
+          </div>
+        </section>
+
+        <div class="bottom-grid">
+          <section class="panel activity-panel"><div class="panel-heading"><div><h2>Recent activity</h2><p>Your latest parking movements.</p></div><button class="icon-button subtle"><i data-lucide="more-horizontal"></i></button></div><div class="activity-list"><div class="activity-row"><div class="activity-icon blue"><i data-lucide="square-parking"></i></div><div><strong>Central Station Garage</strong><span>Yesterday · 8:45 AM — 10:12 AM</span></div><strong class="activity-price">₹840</strong></div><div class="activity-row"><div class="activity-icon orange-bg"><i data-lucide="square-parking"></i></div><div><strong>Harbor Point Parking</strong><span>Sep 18 · 12:20 PM — 1:50 PM</span></div><strong class="activity-price">₹680</strong></div></div></section>
+          <section class="panel system-panel"><div class="panel-heading"><div><h2>Network pulse</h2><p>Across all Parkwise locations.</p></div><span class="live-label"><span></span> Live</span></div><div class="pulse-chart"><div class="chart-axis"><span>100%</span><span>50%</span><span>0%</span></div><div class="chart-lines"><div class="grid-line line-one"></div><div class="grid-line line-two"></div><svg viewBox="0 0 380 120" preserveAspectRatio="none" aria-label="Network availability chart"><defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ff794b" stop-opacity=".22"/><stop offset="1" stop-color="#ff794b" stop-opacity="0"/></linearGradient></defs><path d="M0,78 C22,70 34,88 54,72 S84,53 102,64 S128,76 146,52 S177,40 191,57 S220,70 238,45 S267,51 281,34 S310,43 327,24 S353,30 380,12 V120 H0 Z" fill="url(#chartFill)"/><path d="M0,78 C22,70 34,88 54,72 S84,53 102,64 S128,76 146,52 S177,40 191,57 S220,70 238,45 S267,51 281,34 S310,43 327,24 S353,30 380,12" fill="none" stroke="#ff794b" stroke-width="3"/></svg></div></div><div class="chart-legend"><span><i class="legend-dot orange"></i>Available capacity</span><strong>74% <small>now</small></strong></div></section>
+        </div>
+      </section>
+
+      <section class="view" id="findView">
+        <div class="page-heading"><div><p class="eyebrow">Live parking network</p><h1>Find a parking spot<span class="accent">.</span></h1><p class="lede">Choose a location, then reserve the space that works for you.</p></div><div class="live-label large"><span></span> Updates every 10 seconds</div></div>
+        <div class="booking-layout">
+          <div class="booking-main panel"><div class="booking-step"><span>01</span><div><p class="eyebrow">Choose a location</p><h2>Where are you going?</h2></div></div><div class="location-options" id="locationOptions"><button class="location-option selected" data-location="central"><span class="option-image central-thumb"></span><span><strong>Central Station Garage</strong><small>14 Market Street · 42 spots open</small></span><i data-lucide="check-circle-2"></i></button><button class="location-option" data-location="harbor"><span class="option-image harbor-thumb"></span><span><strong>Harbor Point Parking</strong><small>2 Pier Avenue · 16 spots open</small></span><i data-lucide="circle"></i></button><button class="location-option" data-location="museum"><span class="option-image museum-thumb"></span><span><strong>Northside Museum</strong><small>88 Elm Boulevard · 07 spots open</small></span><i data-lucide="circle"></i></button></div><div class="booking-step second-step"><span>02</span><div><p class="eyebrow">Select a time</p><h2>When will you park?</h2></div></div><div class="time-controls"><label>Date<input id="bookingDate" type="date" value="2026-09-23" /></label><label>Arrival<select id="arrivalTime"><option>10:30 AM</option><option>11:00 AM</option><option>11:30 AM</option><option>12:00 PM</option><option>12:30 PM</option></select></label><label>Duration<select id="duration"><option>2 hours</option><option>1 hour</option><option>3 hours</option><option>All day</option></select></label></div><div class="booking-step third-step"><span>03</span><div><p class="eyebrow">Choose your spot</p><h2>Pick an available bay</h2></div><div class="slot-legend"><span><i class="legend-slot available"></i> Available</span><span><i class="legend-slot booked"></i> Booked</span><span><i class="legend-slot occupied"></i> Occupied</span></div></div><div class="slot-map-wrap"><div class="floor-label"><span>Level B2</span><small>Entrance <i data-lucide="arrow-down"></i></small></div><div class="slot-map" id="slotMap"></div></div></div>
+          <aside class="booking-summary panel"><div class="summary-top"><span class="summary-label">Your reservation</span><div class="summary-icon"><i data-lucide="ticket-check"></i></div></div><h2 id="summaryLocation">Central Station Garage</h2><p class="summary-address"><i data-lucide="map-pin"></i> 14 Market Street</p><div class="summary-line"></div><div class="summary-detail"><span>Date</span><strong id="summaryDate">Wed, Sep 23, 2026</strong></div><div class="summary-detail"><span>Arrival</span><strong id="summaryArrival">10:30 AM</strong></div><div class="summary-detail"><span>Duration</span><strong id="summaryDuration">2 hours</strong></div><div class="summary-detail"><span>Parking bay</span><strong id="summarySlot">Select a spot</strong></div><div class="summary-total"><span>Estimated total</span><strong id="summaryPrice">₹840</strong></div><button class="primary-button" id="reserveButton" disabled>Choose a spot to continue <i data-lucide="arrow-right"></i></button><p class="secure-note"><i data-lucide="shield-check"></i> Secure booking · No payment required now</p></aside>
+        </div>
+      </section>
+
+      <section class="view" id="activityView"><div class="page-heading"><div><p class="eyebrow">Your parking history</p><h1>My activity<span class="accent">.</span></h1><p class="lede">Every booking, in one quiet little place.</p></div></div><div class="panel history-panel"><div class="history-header"><h2>Bookings</h2><div class="filter-select"><i data-lucide="calendar-days"></i><select><option>All time</option><option>This month</option><option>Last month</option></select></div></div><div class="history-table"><div class="history-table-row table-head"><span>Location</span><span>Date & time</span><span>Bay</span><span>Status</span><span>Total</span></div><div class="history-table-row"><span class="table-location"><i data-lucide="square-parking"></i><strong>Central Station Garage</strong></span><span>Sep 22, 2026 · 8:45 AM</span><span>A-12</span><span class="status-pill green"><span></span> Completed</span><span>₹840</span></div><div class="history-table-row"><span class="table-location"><i data-lucide="square-parking"></i><strong>Harbor Point Parking</strong></span><span>Sep 18, 2026 · 12:20 PM</span><span>C-08</span><span class="status-pill green"><span></span> Completed</span><span>₹680</span></div><div class="history-table-row"><span class="table-location"><i data-lucide="square-parking"></i><strong>Central Station Garage</strong></span><span>Sep 12, 2026 · 9:10 AM</span><span>B-04</span><span class="status-pill green"><span></span> Completed</span><span>₹840</span></div></div></div></section>
+
+      <section class="view" id="adminView"><div class="page-heading"><div><p class="eyebrow">Operations center</p><h1>Admin console<span class="accent">.</span></h1><p class="lede">A clear view of your live parking network.</p></div><button class="outline-button"><i data-lucide="download"></i> Export report</button></div><div class="admin-metrics"><div class="admin-stat"><span class="metric-label">Total spaces</span><strong>184</strong><span class="positive"><i data-lucide="arrow-up-right"></i> 8 added this month</span></div><div class="admin-stat"><span class="metric-label">Occupied now</span><strong>67<span class="stat-percent">36%</span></strong><div class="progress-line"><span style="width:36%"></span></div></div><div class="admin-stat"><span class="metric-label">Active bookings</span><strong>31</strong><span class="muted-stat">Across 3 locations</span></div><div class="admin-stat"><span class="metric-label">Sensor network</span><strong class="sensor-online"><span></span> 99.8%</strong><span class="muted-stat">Last sync 8 seconds ago</span></div></div><div class="admin-grid"><section class="panel admin-location-panel"><div class="panel-heading"><div><h2>Location overview</h2><p>Monitor each connected facility.</p></div><button class="primary-button compact"><i data-lucide="plus"></i> Add location</button></div><div class="admin-location-row"><div class="admin-location-name"><span class="location-status green-bg"><i data-lucide="radio"></i></span><div><strong>Central Station Garage</strong><span>72 spaces · 3 levels</span></div></div><div class="admin-bar"><span><i style="width:58%"></i></span><small>42 available</small></div><span class="admin-percent">58%</span><button class="icon-button subtle"><i data-lucide="more-horizontal"></i></button></div><div class="admin-location-row"><div class="admin-location-name"><span class="location-status teal-bg"><i data-lucide="radio"></i></span><div><strong>Harbor Point Parking</strong><span>54 spaces · 2 levels</span></div></div><div class="admin-bar"><span><i style="width:30%"></i></span><small>16 available</small></div><span class="admin-percent">30%</span><button class="icon-button subtle"><i data-lucide="more-horizontal"></i></button></div><div class="admin-location-row"><div class="admin-location-name"><span class="location-status amber-bg"><i data-lucide="radio"></i></span><div><strong>Northside Museum</strong><span>58 spaces · 2 levels</span></div></div><div class="admin-bar"><span><i style="width:12%"></i></span><small>07 available</small></div><span class="admin-percent">12%</span><button class="icon-button subtle"><i data-lucide="more-horizontal"></i></button></div></section><section class="panel sensor-panel"><div class="panel-heading"><div><h2>Hardware health</h2><p>IR sensor connectivity.</p></div><i data-lucide="cpu" class="metric-icon"></i></div><div class="sensor-ring"><div><strong>99.8%</strong><span>online</span></div></div><div class="sensor-footer"><span><i class="green-dot"></i> 181 sensors active</span><span>3 checking</span></div></section></div></section>
+    </main>
+  </div>
+  <div class="toast" id="toast"><i data-lucide="check-circle-2"></i><span>Booking confirmed. Your spot is reserved.</span></div>
+  <div class="modal-backdrop" id="paymentModal"><div class="payment-modal"><button class="modal-close icon-button" id="closePayment" aria-label="Close payment"><i data-lucide="x"></i></button><div class="payment-icon"><i data-lucide="smartphone"></i></div><p class="eyebrow">Secure UPI payment</p><h2>Pay for your spot<span class="accent">.</span></h2><p class="payment-copy">Complete payment to confirm your parking reservation.</p><div class="payment-amount"><span>Parking total</span><strong id="paymentAmount">₹60</strong></div><div class="upi-card"><div class="upi-logo">UPI</div><div><span>UPI payment</span><strong>Secure payment gateway</strong></div></div><a class="primary-button upi-pay-link" id="payButton" href="upi://pay?pa=9701368932-2">Pay with UPI <i data-lucide="arrow-up-right"></i></a><button class="primary-button verify-payment-button" id="verifyPayment" hidden>Verify payment <i data-lucide="shield-check"></i></button><p class="payment-status" id="paymentStatus">After payment, return here to verify your transaction.</p><p class="secure-note"><i data-lucide="shield-check"></i> Your slot is booked only after payment verification</p></div></div>
+  <div class="modal-backdrop" id="confirmationModal"><div class="confirmation-modal"><button class="modal-close icon-button" id="closeModal" aria-label="Close"><i data-lucide="x"></i></button><div class="confirmation-check"><i data-lucide="check"></i></div><p class="eyebrow">You are all set</p><h2>Spot reserved<span class="accent">.</span></h2><p>Your parking bay is waiting for you at <strong id="confirmLocation">Central Station Garage</strong>.</p><div class="confirm-ticket"><div><span>Date & time</span><strong id="confirmTime">Wed, Sep 23 · 10:30 AM</strong></div><div><span>Parking bay</span><strong id="confirmSpot">A-24 · Level B2</strong></div><div><span>Booking ID</span><strong>PW-4928</strong></div></div><button class="primary-button" id="doneButton">Done <i data-lucide="arrow-right"></i></button></div></div>
+  <script src="app.js"></script>
+</body>
+</html>
