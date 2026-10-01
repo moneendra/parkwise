@@ -13,12 +13,16 @@ pick-your-bay booking flow, UPI payment step, booking history and an admin conso
 | `index.html` | The full single-page dashboard (overview · find parking · activity · admin) |
 | `theme.css` | Design tokens: colors, fonts, radii, base styles |
 | `styles.css` | Layout + components, fully responsive |
-| `app.js` | Interactivity: view switching, live slot numbers, booking → UPI flow, toasts |
+| `app.js` | Interactivity: view switching, live slot numbers, booking → UPI flow, IR grace window, toasts |
 
 ## Notes
 
 - **Demo data only** — availability numbers drift every 10 seconds and bookings are
   kept in the page (nothing is sent to a server).
+- **Any-time booking + IR grace window** — the arrival time accepts any time of day.
+  After the reserved arrival time passes, a (simulated) IR sensor watches the bay for
+  5 minutes: if a car is detected the bay shows *Occupied*, otherwise the bay is
+  freed and shows *Available* again.
 - **Background video** — the page looks for `123456789.mp4` next to `index.html`.
   Drop the file in to enable it; without it a clean gradient background is shown.
 - **UPI payment** — the payment step links to the UPI deep link in `index.html`

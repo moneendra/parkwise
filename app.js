@@ -179,6 +179,26 @@
   var DURATION_HOURS = { "1 hour": 1, "2 hours": 2, "3 hours": 3, "All day": 8 };
   var PAYMENT_STATUS_DEFAULT = "After payment, return here to verify your transaction.";
 
+  /* IR grace window: after the reserved arrival time the sensor waits this long
+     for a car; if none is detected the bay is freed again. */
+  var GRACE_MS = 5 * 60 * 1000;
+
+  function pad2(n) { return String(n).padStart(2, "0"); }
+
+  function formatTime12h(hhmm) {
+    if (!hhmm) return "";
+    var parts = hhmm.split(":");
+    var h = parseInt(parts[0], 10);
+    if (isNaN(h) || !parts[1]) return hhmm;
+    var h12 = h % 12 || 12;
+    return h12 + ":" + parts[1] + " " + (h < 12 ? "AM" : "PM");
+  }
+
+  function mmss(ms) {
+    var total = Math.max(0, Math.ceil(ms / 1000));
+    return Math.floor(total / 60) + ":" + pad2(total % 60);
+  }
+
   var els = {
     locationOptions: $("#locationOptions"),
     bookingDate: $("#bookingDate"),
@@ -207,16 +227,25 @@
   var selectedLocation = "central";
   var selectedSlot = null;
 
+  /* Active bookings for the IR grace-window logic.
+     status: "booked" → "awaiting" (grace countdown) → "occupied" | "released" */
+  var bookings = [];
+
   if (!els.slotMap || !els.reserveButton) return;
 
-  var todayIso = (function () {
-    var pad = function (n) { return String(n).padStart(2, "0"); };
-    return now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
-  })();
+  var todayIso = now.getFullYear() + "-" + pad2(now.getMonth() + 1) + "-" + pad2(now.getDate());
 
   if (els.bookingDate) {
     els.bookingDate.min = todayIso;
     els.bookingDate.value = todayIso;
+  }
+
+  /* any time of day is bookable — default the arrival to the next 5-minute mark */
+  if (els.arrivalTime) {
+    var t = new Date(Date.now() + 60000);
+    if (t.getMinutes() % 5) t.setMinutes(t.getMinutes() + 5 - (t.getMinutes() % 5));
+    t.setSeconds(0, 0);
+    els.arrivalTime.value = pad2(t.getHours()) + ":" + pad2(t.getMinutes());
   }
 
   function rateFor() { return LOCATIONS[selectedLocation].rate; }
@@ -239,7 +268,7 @@
         weekday: "short", month: "short", day: "numeric", year: "numeric"
       });
     }
-    if (els.summaryArrival) els.summaryArrival.textContent = els.arrivalTime ? els.arrivalTime.value : "10:30 AM";
+    if (els.summaryArrival) els.summaryArrival.textContent = formatTime12h(els.arrivalTime ? els.arrivalTime.value : "");
     if (els.summaryDuration) els.summaryDuration.textContent = els.duration.value;
     els.summarySlot.textContent = selectedSlot ? selectedSlot + " · Level B2" : "Select a spot";
     els.summaryPrice.textContent = rupees(priceFor());
@@ -252,6 +281,51 @@
       els.reserveButton.innerHTML = 'Choose a spot to continue <i data-lucide="arrow-right"></i>';
     }
     refreshIcons();
+  }
+
+  function onSlotClick(event) {
+    var clicked = event.currentTarget;
+    $$(".slot.selected", els.slotMap).forEach(function (other) {
+      other.classList.remove("selected");
+    });
+    clicked.classList.add("selected");
+    selectedSlot = clicked.dataset.slot;
+    updateSummary();
+  }
+
+  /* Paint a booking's current state onto its slot tile (if it is on the map). */
+  function applyBookingToTile(booking) {
+    var tile = $('.slot[data-slot="' + booking.slotId + '"]', els.slotMap);
+    if (!tile) return;
+    tile.classList.remove("selected", "available", "booked", "awaiting", "occupied");
+
+    if (booking.status === "released") {
+      tile.className += " available";
+      tile.disabled = false;
+      tile.textContent = booking.slotId;
+      tile.addEventListener("click", onSlotClick);
+      return;
+    }
+
+    if (booking.status === "awaiting") {
+      tile.className += " awaiting";
+      tile.innerHTML = booking.slotId + "<small>IR · " + mmss(booking.graceEndsAt - Date.now()) + "</small>";
+    } else if (booking.status === "occupied") {
+      tile.className += " occupied";
+      tile.textContent = booking.slotId;
+    } else {
+      tile.className += " booked";
+      tile.textContent = booking.slotId;
+    }
+    tile.disabled = true;
+  }
+
+  function reapplyBookings() {
+    bookings.forEach(function (booking) {
+      if (booking.location === selectedLocation && booking.status !== "released") {
+        applyBookingToTile(booking);
+      }
+    });
   }
 
   function renderSlots() {
@@ -271,19 +345,12 @@
         tile.dataset.slot = slotId;
 
         if (state === "available") {
-          tile.addEventListener("click", function (event) {
-            var clicked = event.currentTarget;
-            $$(".slot.selected", els.slotMap).forEach(function (other) {
-              other.classList.remove("selected");
-            });
-            clicked.classList.add("selected");
-            selectedSlot = clicked.dataset.slot;
-            updateSummary();
-          });
+          tile.addEventListener("click", onSlotClick);
         }
         els.slotMap.appendChild(tile);
       }
     });
+    reapplyBookings();
   }
 
   if (els.locationOptions) {
@@ -336,33 +403,48 @@
       var dateObj = new Date(dateVal + "T00:00:00");
       var bookingId = "PW-" + (1000 + Math.floor(Math.random() * 9000));
 
+      /* reserved arrival moment — clamped to now if the user picked a past time */
+      var timeVal = els.arrivalTime && els.arrivalTime.value ? els.arrivalTime.value : "10:30";
+      var arrivalAt = new Date(dateVal + "T" + timeVal + ":00").getTime();
+      if (isNaN(arrivalAt) || arrivalAt < Date.now()) arrivalAt = Date.now();
+
+      var booking = {
+        location: selectedLocation,
+        slotId: selectedSlot,
+        arrivalAt: arrivalAt,
+        graceEndsAt: arrivalAt + GRACE_MS,
+        irDetectAt: null,
+        status: "booked",
+        row: null
+      };
+      /* simulated IR sensor: roughly half the time the car shows up mid-window */
+      if (Math.random() < 0.5) {
+        booking.irDetectAt = arrivalAt + 15000 + Math.floor(Math.random() * (GRACE_MS - 30000));
+      }
+      bookings.push(booking);
+
       if (els.paymentModal) closeModal(els.paymentModal);
 
       if (els.confirmLocation) els.confirmLocation.textContent = loc.name;
       if (els.confirmTime) {
         els.confirmTime.textContent = dateObj.toLocaleDateString("en-US", {
           weekday: "short", month: "short", day: "numeric"
-        }) + " · " + (els.arrivalTime ? els.arrivalTime.value : "");
+        }) + " · " + formatTime12h(timeVal);
       }
       if (els.confirmSpot) els.confirmSpot.textContent = selectedSlot + " · Level B2";
       var idEl = $$(".confirm-ticket strong")[2];
       if (idEl) idEl.textContent = bookingId;
 
       /* the reserved bay is no longer available */
-      var bookedTile = $(".slot.selected", els.slotMap);
-      if (bookedTile) {
-        bookedTile.classList.remove("selected");
-        bookedTile.classList.add("booked");
-        bookedTile.disabled = true;
-      }
+      applyBookingToTile(booking);
 
-      addHistoryRow(loc.name, dateObj, bookingId);
+      addHistoryRow(loc.name, dateObj, bookingId, booking);
       bumpActivityCount();
       selectedSlot = null;
       updateSummary();
 
       if (els.confirmationModal) openModal(els.confirmationModal);
-      showToast("Booking confirmed. Your spot is reserved.");
+      showToast("Booking confirmed. The IR sensor holds " + booking.slotId + " for you until 5 minutes after " + formatTime12h(timeVal) + ".");
     });
   }
 
@@ -375,7 +457,7 @@
     });
   }
 
-  function addHistoryRow(locationName, dateObj, bookingId) {
+  function addHistoryRow(locationName, dateObj, bookingId, booking) {
     var table = $(".history-table");
     if (!table) return;
     var row = document.createElement("div");
@@ -384,15 +466,53 @@
       '<span class="table-location"><i data-lucide="square-parking"></i><strong>' + locationName + "</strong></span>" +
       "<span>" + dateObj.toLocaleDateString("en-US", {
         month: "short", day: "numeric", year: "numeric"
-      }) + " · " + (els.arrivalTime ? els.arrivalTime.value : "") + "</span>" +
-      "<span>" + (els.confirmSpot ? selectedSlot || "—" : "—") + "</span>" +
+      }) + " · " + formatTime12h(els.arrivalTime ? els.arrivalTime.value : "") + "</span>" +
+      "<span>" + (booking ? booking.slotId : "—") + "</span>" +
       '<span class="status-pill green"><span></span> Confirmed</span>' +
       "<span>" + els.summaryPrice.textContent + "</span>";
     /* keep the id for reference even though the column shows the bay */
     row.dataset.bookingId = bookingId;
     table.insertBefore(row, table.children[1] || null);
+    if (booking) booking.row = row;
     refreshIcons();
   }
+
+  function setHistoryStatus(booking, label, pillClass) {
+    if (!booking.row) return;
+    var pill = booking.row.querySelector(".status-pill");
+    if (!pill) return;
+    pill.className = "status-pill " + pillClass;
+    pill.innerHTML = "<span></span> " + label;
+  }
+
+  /* ---- IR grace-window ticker ------------------------------------------------
+     When the reserved arrival time passes, the (simulated) IR sensor watches the
+     bay for GRACE_MS. Car detected → bay shows Occupied; still empty after the
+     window → the bay is freed and shows Available again. */
+  setInterval(function () {
+    var nowMs = Date.now();
+    bookings.forEach(function (booking) {
+      if (booking.status === "booked" && nowMs >= booking.arrivalAt) {
+        booking.status = "awaiting";
+        applyBookingToTile(booking);
+        showToast("Arrival time reached — IR sensor watching " + booking.slotId + " for 5 minutes.");
+      } else if (booking.status === "awaiting") {
+        if (booking.irDetectAt && nowMs >= booking.irDetectAt) {
+          booking.status = "occupied";
+          applyBookingToTile(booking);
+          setHistoryStatus(booking, "Parked", "green");
+          showToast("IR sensor detected the vehicle at " + booking.slotId + " — booking active.");
+        } else if (nowMs >= booking.graceEndsAt) {
+          booking.status = "released";
+          applyBookingToTile(booking);
+          setHistoryStatus(booking, "Released", "amber");
+          showToast("No vehicle detected at " + booking.slotId + " within 5 minutes — bay is free again.");
+        } else {
+          applyBookingToTile(booking); /* keep the countdown fresh */
+        }
+      }
+    });
+  }, 1000);
 
   function bumpActivityCount() {
     var count = $(".nav-count");

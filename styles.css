@@ -1554,6 +1554,26 @@ body:has(.site-background-video:not([style*="display: none"])) .site-background-
   border: 1.5px solid #f0b3b3;
 }
 
+.legend-slot.awaiting {
+  background: #fff3df;
+  border: 1.5px solid #f2c184;
+}
+
+.time-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -6px 0 0 52px;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.time-hint svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
+
 .slot-map-wrap {
   margin-left: 52px;
   background: #f6f7f4;
@@ -1630,6 +1650,32 @@ body:has(.site-background-video:not([style*="display: none"])) .site-background-
   border-color: #f0b3b3;
   color: #b23d3d;
   cursor: not-allowed;
+}
+
+.slot.awaiting {
+  background: #fff3df;
+  border-color: #f2c184;
+  color: #a8620a;
+  cursor: not-allowed;
+  animation: awaiting-pulse 1.6s ease-in-out infinite;
+}
+
+.slot.awaiting small {
+  display: block;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+}
+
+@keyframes awaiting-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(240, 150, 40, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgba(240, 150, 40, 0);
+  }
 }
 
 .slot.selected {
