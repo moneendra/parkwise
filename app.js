@@ -1,7 +1,8 @@
 /* ==========================================================================
    Parkwise — app logic
    View switching · live availability · booking flow · UPI modal · toasts
-   Demo data only — no backend required.
+   Bays are the real IR-sensor slots (Arduino Uno → serial-bridge → MQTT)
+   when the hardware is online; otherwise a built-in demo simulation runs.
    ========================================================================== */
 
 (function () {
@@ -228,8 +229,124 @@
   var selectedSlot = null;
 
   /* Active bookings for the IR grace-window logic.
-     status: "booked" → "awaiting" (grace countdown) → "occupied" | "released" */
+     status: "booked" → "awaiting" (grace countdown) → "occupied" | "released",
+     and "occupied" → "done" once the IR sensor sees the car leave. */
   var bookings = [];
+
+  /* ---- live IR hardware (Arduino Uno + HW-201 sensors via MQTT) -------------
+     The Uno streams JSON over USB; serial-bridge.js republishes it to the
+     public broker and this page subscribes over secure WebSocket — the same
+     topics and payloads the real dashboard uses:
+       <prefix>/slot/<ID>/status        {"slot":"S1","occupied":true,..} (retained)
+       <prefix>/slot/<ID>/availability  "online" | "offline"            (retained)
+     While no hardware is online, the bays fall back to a simulated demo. */
+  var MQTT_URL = "wss://broker.emqx.io:8084/mqtt";
+  var MQTT_PREFIX = "smartparking/mne-f3kqz2";
+  var KNOWN_SLOTS = ["S1", "S2", "S3", "S4", "S5", "S6"];
+  var hardware = { live: false, slots: {} }; /* id → { online, occupied } */
+  var simStates = {}; /* location → { slotId: occupied } — demo fallback */
+
+  function knownSlotIds() {
+    var ids = KNOWN_SLOTS.slice();
+    Object.keys(hardware.slots).forEach(function (id) {
+      if (ids.indexOf(id) === -1) ids.push(id);
+    });
+    ids.sort(function (a, b) {
+      return parseInt(a.slice(1), 10) - parseInt(b.slice(1), 10);
+    });
+    return ids;
+  }
+
+  function slotIsOnline(slotId) {
+    var hw = hardware.slots[slotId];
+    return !!(hw && hw.online);
+  }
+
+  /* the real sensor verdict for a bay — false while that bay is offline */
+  function irSeesCar(slotId) {
+    var hw = hardware.slots[slotId];
+    return !!(hardware.live && hw && hw.online && hw.occupied);
+  }
+
+  function simOccupied(slotId) {
+    var lot = simStates[selectedLocation] || (simStates[selectedLocation] = {});
+    if (typeof lot[slotId] !== "boolean") lot[slotId] = Math.random() < 0.4;
+    return lot[slotId];
+  }
+
+  function setIrStatus() {
+    var chip = $("#irStatus");
+    if (!chip) return;
+    if (hardware.live) {
+      chip.className = "ir-status online";
+      chip.textContent = "IR hardware live";
+    } else {
+      chip.className = "ir-status offline";
+      chip.textContent = "IR hardware offline · demo";
+    }
+  }
+
+  function refreshLiveFlag() {
+    var wasLive = hardware.live;
+    hardware.live = knownSlotIds().some(slotIsOnline);
+    if (hardware.live && !wasLive) {
+      showToast("IR hardware connected — the bays are now live from the sensors.");
+    }
+  }
+
+  function ensureSlotTile(slotId) {
+    if ($('[data-slot="' + slotId + '"]', els.slotMap)) return;
+    var tile = document.createElement("button");
+    tile.type = "button";
+    tile.dataset.slot = slotId;
+    els.slotMap.appendChild(tile);
+  }
+
+  function onMqttMessage(topic, payload) {
+    var pattern = new RegExp(
+      "^" + MQTT_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "/slot/([^/]+)/(status|availability)$"
+    );
+    var match = topic.match(pattern);
+    if (!match) return;
+    var slotId = match[1];
+    var kind = match[2];
+    var hw = hardware.slots[slotId] || (hardware.slots[slotId] = { online: false, occupied: false });
+    if (kind === "availability") {
+      hw.online = payload.toString() === "online";
+    } else {
+      try {
+        hw.occupied = !!JSON.parse(payload.toString()).occupied;
+      } catch (err) { /* ignore malformed payloads */ }
+    }
+    refreshLiveFlag();
+    ensureSlotTile(slotId);
+    setIrStatus();
+    paintAllTiles();
+  }
+
+  function connectHardware() {
+    if (typeof mqtt === "undefined") {
+      setIrStatus();
+      return;
+    }
+    try {
+      var client = mqtt.connect(MQTT_URL, {
+        clientId: "parkwise-web-" + Math.random().toString(16).slice(2, 8),
+        clean: true,
+        reconnectPeriod: 5000,
+        connectTimeout: 8000
+      });
+      client.on("connect", function () {
+        client.subscribe([
+          MQTT_PREFIX + "/slot/+/status",
+          MQTT_PREFIX + "/slot/+/availability"
+        ]);
+      });
+      client.on("message", onMqttMessage);
+    } catch (err) {
+      setIrStatus();
+    }
+  }
 
   if (!els.slotMap || !els.reserveButton) return;
 
@@ -270,7 +387,7 @@
     }
     if (els.summaryArrival) els.summaryArrival.textContent = formatTime12h(els.arrivalTime ? els.arrivalTime.value : "");
     if (els.summaryDuration) els.summaryDuration.textContent = els.duration.value;
-    els.summarySlot.textContent = selectedSlot ? selectedSlot + " · Level B2" : "Select a spot";
+    els.summarySlot.textContent = selectedSlot ? "Bay " + selectedSlot : "Select a spot";
     els.summaryPrice.textContent = rupees(priceFor());
 
     if (selectedSlot) {
@@ -293,64 +410,65 @@
     updateSummary();
   }
 
-  /* Paint a booking's current state onto its slot tile (if it is on the map). */
-  function applyBookingToTile(booking) {
-    var tile = $('.slot[data-slot="' + booking.slotId + '"]', els.slotMap);
-    if (!tile) return;
-    tile.classList.remove("selected", "available", "booked", "awaiting", "occupied");
-
-    if (booking.status === "released") {
-      tile.className += " available";
-      tile.disabled = false;
-      tile.textContent = booking.slotId;
-      tile.addEventListener("click", onSlotClick);
-      return;
+  /* the latest unfinished booking on a bay, if any */
+  function activeBookingFor(slotId) {
+    for (var i = bookings.length - 1; i >= 0; i--) {
+      var b = bookings[i];
+      if (b.slotId === slotId && (b.status === "booked" || b.status === "awaiting" || b.status === "occupied")) {
+        return b;
+      }
     }
-
-    if (booking.status === "awaiting") {
-      tile.className += " awaiting";
-      tile.innerHTML = booking.slotId + "<small>IR · " + mmss(booking.graceEndsAt - Date.now()) + "</small>";
-    } else if (booking.status === "occupied") {
-      tile.className += " occupied";
-      tile.textContent = booking.slotId;
-    } else {
-      tile.className += " booked";
-      tile.textContent = booking.slotId;
-    }
-    tile.disabled = true;
+    return null;
   }
 
-  function reapplyBookings() {
-    bookings.forEach(function (booking) {
-      if (booking.location === selectedLocation && booking.status !== "released") {
-        applyBookingToTile(booking);
+  /* A bay's displayed state: an active booking wins, otherwise the real IR
+     sensor decides, and with no hardware online a simulated state is used. */
+  function tileStateFor(slotId) {
+    var booking = activeBookingFor(slotId);
+    if (booking) return booking.status; /* booked | awaiting | occupied */
+    if (slotIsOnline(slotId)) {
+      return hardware.slots[slotId].occupied ? "occupied" : "available";
+    }
+    return simOccupied(slotId) ? "occupied" : "available";
+  }
+
+  function paintTile(slotId) {
+    var tile = $('[data-slot="' + slotId + '"]', els.slotMap);
+    if (!tile) return;
+    var state = tileStateFor(slotId);
+    var booking = activeBookingFor(slotId);
+    tile.className = "slot " + state;
+    if (slotId === selectedSlot) tile.classList.add("selected");
+    if (state === "awaiting" && booking) {
+      tile.innerHTML = slotId + "<small>IR · " + mmss(booking.graceEndsAt - Date.now()) + "</small>";
+    } else {
+      tile.textContent = slotId;
+    }
+    if (state === "available") {
+      tile.disabled = false;
+      if (!tile.dataset.bound) {
+        tile.dataset.bound = "1";
+        tile.addEventListener("click", onSlotClick);
       }
-    });
+    } else {
+      tile.disabled = true;
+    }
+  }
+
+  function paintAllTiles() {
+    knownSlotIds().forEach(paintTile);
   }
 
   function renderSlots() {
     selectedSlot = null;
     els.slotMap.innerHTML = "";
-    ["A", "B", "C"].forEach(function (rowLetter) {
-      for (var i = 1; i <= 8; i++) {
-        var slotId = rowLetter + "-" + String(i).padStart(2, "0");
-        var roll = Math.random();
-        var state = roll < 0.45 ? "available" : roll < 0.75 ? "booked" : "occupied";
-
-        var tile = document.createElement("button");
-        tile.type = "button";
-        tile.className = "slot " + state;
-        tile.textContent = slotId;
-        if (state !== "available") tile.disabled = true;
-        tile.dataset.slot = slotId;
-
-        if (state === "available") {
-          tile.addEventListener("click", onSlotClick);
-        }
-        els.slotMap.appendChild(tile);
-      }
+    knownSlotIds().forEach(function (slotId) {
+      var tile = document.createElement("button");
+      tile.type = "button";
+      tile.dataset.slot = slotId;
+      els.slotMap.appendChild(tile);
     });
-    reapplyBookings();
+    paintAllTiles();
   }
 
   if (els.locationOptions) {
@@ -417,8 +535,9 @@
         status: "booked",
         row: null
       };
-      /* simulated IR sensor: roughly half the time the car shows up mid-window */
-      if (Math.random() < 0.5) {
+      /* simulated IR sensor for demo mode (no hardware online):
+         roughly half the time the car shows up mid-window */
+      if (!hardware.live && Math.random() < 0.5) {
         booking.irDetectAt = arrivalAt + 15000 + Math.floor(Math.random() * (GRACE_MS - 30000));
       }
       bookings.push(booking);
@@ -431,12 +550,12 @@
           weekday: "short", month: "short", day: "numeric"
         }) + " · " + formatTime12h(timeVal);
       }
-      if (els.confirmSpot) els.confirmSpot.textContent = selectedSlot + " · Level B2";
+      if (els.confirmSpot) els.confirmSpot.textContent = "Bay " + selectedSlot;
       var idEl = $$(".confirm-ticket strong")[2];
       if (idEl) idEl.textContent = bookingId;
 
       /* the reserved bay is no longer available */
-      applyBookingToTile(booking);
+      paintTile(booking.slotId);
 
       addHistoryRow(loc.name, dateObj, bookingId, booking);
       bumpActivityCount();
@@ -486,33 +605,46 @@
   }
 
   /* ---- IR grace-window ticker ------------------------------------------------
-     When the reserved arrival time passes, the (simulated) IR sensor watches the
-     bay for GRACE_MS. Car detected → bay shows Occupied; still empty after the
-     window → the bay is freed and shows Available again. */
+     Once the reserved arrival time passes, the IR sensor watches the bay for
+     GRACE_MS. Car detected → bay shows Occupied; still empty after the window
+     → the bay is freed and shows Available again. With hardware online the
+     verdict comes from the real HW-201 sensor; offline it is simulated. */
   setInterval(function () {
     var nowMs = Date.now();
     bookings.forEach(function (booking) {
-      if (booking.status === "booked" && nowMs >= booking.arrivalAt) {
-        booking.status = "awaiting";
-        applyBookingToTile(booking);
-        showToast("Arrival time reached — IR sensor watching " + booking.slotId + " for 5 minutes.");
-      } else if (booking.status === "awaiting") {
-        if (booking.irDetectAt && nowMs >= booking.irDetectAt) {
+      if (booking.status === "booked") {
+        if (irSeesCar(booking.slotId)) {
+          /* arrived early — no need to wait for the reserved time */
           booking.status = "occupied";
-          applyBookingToTile(booking);
+          setHistoryStatus(booking, "Parked", "green");
+          showToast("IR sensor detected the vehicle at " + booking.slotId + " — booking active.");
+        } else if (nowMs >= booking.arrivalAt) {
+          booking.status = "awaiting";
+          showToast("Arrival time reached — the IR sensor is watching " + booking.slotId + " for 5 minutes.");
+        }
+      } else if (booking.status === "awaiting") {
+        var detected = irSeesCar(booking.slotId) ||
+          (!hardware.live && booking.irDetectAt && nowMs >= booking.irDetectAt);
+        if (detected) {
+          booking.status = "occupied";
           setHistoryStatus(booking, "Parked", "green");
           showToast("IR sensor detected the vehicle at " + booking.slotId + " — booking active.");
         } else if (nowMs >= booking.graceEndsAt) {
           booking.status = "released";
-          applyBookingToTile(booking);
           setHistoryStatus(booking, "Released", "amber");
           showToast("No vehicle detected at " + booking.slotId + " within 5 minutes — bay is free again.");
-        } else {
-          applyBookingToTile(booking); /* keep the countdown fresh */
         }
+      } else if (booking.status === "occupied" && slotIsOnline(booking.slotId) && !hardware.slots[booking.slotId].occupied) {
+        booking.status = "done";
+        setHistoryStatus(booking, "Completed", "green");
+        showToast(booking.slotId + " is free again — parking session completed.");
       }
     });
+    paintAllTiles();
   }, 1000);
+
+  connectHardware();
+  setIrStatus();
 
   function bumpActivityCount() {
     var count = $(".nav-count");

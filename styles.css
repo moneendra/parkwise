@@ -1609,8 +1609,39 @@ body:has(.site-background-video:not([style*="display: none"])) .site-background-
 
 .slot-map {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
+}
+
+.ir-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 8px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 700;
+  vertical-align: 1px;
+}
+
+.ir-status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.ir-status.online {
+  color: #177a4c;
+  background: #e7f6ee;
+}
+
+.ir-status.offline {
+  color: #a8620a;
+  background: #fff3df;
 }
 
 .slot {
@@ -2453,7 +2484,7 @@ body:has(.site-background-video:not([style*="display: none"])) .site-background-
   }
 
   .slot-map {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .booking-main,
