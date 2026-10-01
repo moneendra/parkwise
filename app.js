@@ -54,7 +54,16 @@
     admin: { el: $("#adminView"), label: "Admin console" }
   };
 
+  function isAdminSignedIn() {
+    var s = window.PWAuth && window.PWAuth.session ? window.PWAuth.session() : null;
+    return !!(s && s.role === "admin");
+  }
+
   function showView(name) {
+    if (name === "admin" && !isAdminSignedIn()) {
+      showToast("The Admin console is only for admin accounts.");
+      return;
+    }
     var target = views[name];
     if (!target) return;
     Object.keys(views).forEach(function (key) {
@@ -65,6 +74,7 @@
     });
     var crumb = $("#breadcrumbCurrent");
     if (crumb) crumb.textContent = target.label;
+    if (name === "admin") renderAdminConsole();
     document.body.classList.remove("nav-open");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -170,11 +180,50 @@
 
   /* ---- booking flow --------------------------------------------------------------- */
 
-  var LOCATIONS = {
+  /* ---- admin-managed data: bays + locations (saved on this device) --------
+     The admin console writes these stores; the booking flow reads them.
+     Defaults apply until the admin makes a change. */
+  var STORE_BAYS = "pw_bays_v1";
+  var STORE_LOCS = "pw_locations_v1";
+
+  function readStore(key, fallback) {
+    try {
+      var raw = JSON.parse(localStorage.getItem(key) || "null");
+      if (raw != null) return raw;
+    } catch (err) { /* corrupt or blocked storage — use fallback */ }
+    return fallback;
+  }
+  function writeStore(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (err) { /* storage blocked */ }
+  }
+
+  var DEFAULT_LOCATIONS = {
     central: { name: "Central Station Garage", address: "14 Market Street", rate: 420 },
     harbor: { name: "Harbor Point Parking", address: "2 Pier Avenue", rate: 400 },
     museum: { name: "Northside Museum", address: "88 Elm Boulevard", rate: 300 }
   };
+  var LOCATIONS = readStore(STORE_LOCS, null) || JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
+  function saveLocations() { writeStore(STORE_LOCS, LOCATIONS); }
+
+  var DEFAULT_BAYS = ["S1", "S2", "S3", "S4", "S5", "S6"];
+  function managedBays() {
+    var stored = readStore(STORE_BAYS, null);
+    if (Array.isArray(stored) && stored.length) return stored.map(String);
+    return DEFAULT_BAYS.slice();
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function slugFor(name, taken) {
+    var base = String(name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "location";
+    var slug = base, n = 2;
+    while (taken.hasOwnProperty(slug)) slug = base + "-" + n++;
+    return slug;
+  }
 
   var DURATION_HOURS = { "1 hour": 1, "2 hours": 2, "3 hours": 3, "All day": 8 };
   var PAYMENT_STATUS_DEFAULT = "After payment, return here to verify your transaction.";
@@ -241,7 +290,7 @@
      While no hardware is online, the bays fall back to a simulated demo. */
   var MQTT_URL = "wss://broker.emqx.io:8084/mqtt";
   var MQTT_PREFIX = "smartparking/mne-f3kqz2";
-  var KNOWN_SLOTS = ["S1", "S2", "S3", "S4", "S5", "S6"];
+  var KNOWN_SLOTS = managedBays(); /* admin-managed bay list, default S1–S6 */
   var hardware = { live: false, slots: {} }; /* id → { online, occupied } */
   var simStates = {}; /* location → { slotId: occupied } — demo fallback */
 
@@ -321,6 +370,7 @@
     ensureSlotTile(slotId);
     setIrStatus();
     paintAllTiles();
+    updateAdminMetrics();
   }
 
   function connectHardware() {
@@ -370,7 +420,8 @@
   function rupees(amount) { return "₹" + amount.toLocaleString("en-IN"); }
 
   function updateSummary() {
-    var loc = LOCATIONS[selectedLocation];
+    var loc = LOCATIONS[selectedLocation] || LOCATIONS[Object.keys(LOCATIONS)[0]];
+    if (!loc) return;
     var dateVal = els.bookingDate && els.bookingDate.value ? els.bookingDate.value : todayIso;
     var dateObj = new Date(dateVal + "T00:00:00");
 
@@ -431,17 +482,22 @@
     return simOccupied(slotId) ? "occupied" : "available";
   }
 
+  /* word shown under each bay ID so the sensor verdict is unmistakable */
+  var STATE_LABELS = { available: "OPEN", booked: "BOOKED", occupied: "OCCUPIED", awaiting: "" };
+
   function paintTile(slotId) {
     var tile = $('[data-slot="' + slotId + '"]', els.slotMap);
     if (!tile) return;
     var state = tileStateFor(slotId);
     var booking = activeBookingFor(slotId);
     tile.className = "slot " + state;
+    tile.title = slotId + " — " +
+      ({ available: "available", booked: "booked", awaiting: "waiting for your car (IR)", occupied: "occupied — IR sensor detects a vehicle" }[state] || state);
     if (slotId === selectedSlot) tile.classList.add("selected");
     if (state === "awaiting" && booking) {
       tile.innerHTML = slotId + "<small>IR · " + mmss(booking.graceEndsAt - Date.now()) + "</small>";
     } else {
-      tile.textContent = slotId;
+      tile.innerHTML = slotId + "<small>" + (STATE_LABELS[state] || "") + "</small>";
     }
     if (state === "available") {
       tile.disabled = false;
@@ -461,13 +517,46 @@
   function renderSlots() {
     selectedSlot = null;
     els.slotMap.innerHTML = "";
-    knownSlotIds().forEach(function (slotId) {
+    var ids = knownSlotIds();
+    if (!ids.length) {
+      els.slotMap.innerHTML =
+        '<p class="slot-map-empty">No bays configured — an admin can add them in the Admin console.</p>';
+      return;
+    }
+    ids.forEach(function (slotId) {
       var tile = document.createElement("button");
       tile.type = "button";
       tile.dataset.slot = slotId;
       els.slotMap.appendChild(tile);
     });
     paintAllTiles();
+  }
+
+  /* the location picker is rebuilt from the admin-managed store, so new or
+     removed locations show up here immediately */
+  var THUMB_CLASSES = ["generic-thumb", "generic-thumb-2", "generic-thumb-3"];
+
+  function openBayCount() {
+    return knownSlotIds().filter(function (id) { return tileStateFor(id) === "available"; }).length;
+  }
+
+  function renderLocationOptions() {
+    if (!els.locationOptions) return;
+    var keys = Object.keys(LOCATIONS);
+    if (!keys.length) return;
+    if (keys.indexOf(selectedLocation) === -1) selectedLocation = keys[0];
+    var open = openBayCount();
+    els.locationOptions.innerHTML = keys.map(function (key, i) {
+      var loc = LOCATIONS[key];
+      var selected = key === selectedLocation;
+      return '<button class="location-option' + (selected ? " selected" : "") +
+        '" data-location="' + escHtml(key) + '">' +
+        '<span class="option-image ' + THUMB_CLASSES[i % THUMB_CLASSES.length] + '"></span>' +
+        '<span><strong>' + escHtml(loc.name) + '</strong><small>' + escHtml(loc.address || "—") +
+        " · " + open + " spots open</small></span>" +
+        '<i data-lucide="' + (selected ? "check-circle-2" : "circle") + '"></i></button>';
+    }).join("");
+    refreshIcons();
   }
 
   if (els.locationOptions) {
@@ -490,6 +579,7 @@
     if (input) input.addEventListener("change", updateSummary);
   });
 
+  renderLocationOptions();
   renderSlots();
   updateSummary();
 
@@ -640,6 +730,7 @@
       }
     });
     paintAllTiles();
+    updateAdminMetrics();
   }, 1000);
 
   connectHardware();
@@ -652,13 +743,205 @@
     count.textContent = String(value + 1);
   }
 
-  /* ---- admin demo actions --------------------------------------------------- */
+  /* ---- admin console ---------------------------------------------------------- */
 
-  var adminExport = $("#adminView .outline-button");
-  if (adminExport) adminExport.addEventListener("click", function () { showToast("Report exported (demo)."); });
+  function bayPillClass(state) {
+    return { available: "green", booked: "blue", awaiting: "amber", occupied: "red" }[state] || "green";
+  }
+  function bayStateLabel(state) {
+    return {
+      available: "Available", booked: "Booked", awaiting: "Awaiting (IR)", occupied: "Occupied"
+    }[state] || state;
+  }
 
-  var addLocation = $("#adminView .admin-location-panel .primary-button");
-  if (addLocation) addLocation.addEventListener("click", function () { showToast("Add location (demo)."); });
+  function updateAdminMetrics() {
+    var view = views.admin && views.admin.el;
+    if (!view || !view.classList.contains("active")) return;
+    var ids = knownSlotIds();
+    var occupied = ids.filter(function (id) { return tileStateFor(id) === "occupied"; }).length;
+    var online = ids.filter(slotIsOnline).length;
+    var activeBookings = bookings.filter(function (b) {
+      return b.status === "booked" || b.status === "awaiting" || b.status === "occupied";
+    }).length;
+
+    var t = $("#adminTotalBays"); if (t) t.textContent = String(ids.length);
+    var o = $("#adminOccupiedNow"); if (o) o.textContent = String(occupied);
+    var bar = $("#adminOccupiedBar");
+    if (bar) bar.style.width = (ids.length ? Math.round((occupied * 100) / ids.length) : 0) + "%";
+    var ab = $("#adminActiveBookings"); if (ab) ab.textContent = String(activeBookings);
+
+    var pill = $("#adminSensorPill");
+    if (pill) {
+      pill.className = hardware.live ? "sensor-online" : "sensor-offline";
+      pill.innerHTML = "<span></span> " + (hardware.live ? "live" : "offline");
+    }
+    var sub = $("#adminSensorSub");
+    if (sub) sub.textContent = online + " of " + ids.length + " sensors reporting";
+    var pct = $("#adminSensorOnline");
+    if (pct) pct.textContent = ids.length ? Math.round((online * 100) / ids.length) + "%" : "0%";
+    var act = $("#adminSensorsActive"); if (act) act.textContent = online + " sensors active";
+    var chk = $("#adminSensorsChecking"); if (chk) chk.textContent = (ids.length - online) + " offline";
+  }
+
+  function renderAdminConsole() {
+    if (!isAdminSignedIn()) return;
+
+    var bayList = $("#adminBayList");
+    if (bayList) {
+      var ids = knownSlotIds();
+      bayList.innerHTML = ids.length
+        ? ids.map(function (id) {
+            var st = tileStateFor(id);
+            var online = slotIsOnline(id);
+            return '<div class="admin-location-row admin-manage-row">' +
+              '<div class="admin-location-name">' +
+              '<span class="location-status ' + (online ? "green-bg" : "gray-bg") + '"><i data-lucide="radio"></i></span>' +
+              '<div><strong>Bay ' + escHtml(id) + '</strong><span>' +
+              (online ? "IR sensor online" : "IR sensor offline") + '</span></div></div>' +
+              '<span class="status-pill ' + bayPillClass(st) + '"><span></span> ' + bayStateLabel(st) + '</span>' +
+              '<button class="icon-button subtle admin-remove" data-remove-bay="' + escHtml(id) + '" aria-label="Remove bay ' + escHtml(id) + '"><i data-lucide="trash-2"></i></button>' +
+              '</div>';
+          }).join("")
+        : '<p class="admin-empty">No bays yet — add the first one above.</p>';
+    }
+
+    var locList = $("#adminLocationList");
+    if (locList) {
+      var keys = Object.keys(LOCATIONS);
+      locList.innerHTML = keys.length
+        ? keys.map(function (key) {
+            var loc = LOCATIONS[key];
+            return '<div class="admin-location-row admin-manage-row">' +
+              '<div class="admin-location-name">' +
+              '<span class="location-status teal-bg"><i data-lucide="map-pin"></i></span>' +
+              '<div><strong>' + escHtml(loc.name) + '</strong><span>' + escHtml(loc.address || "—") + '</span></div></div>' +
+              '<strong class="admin-rate">₹' + Number(loc.rate || 0).toLocaleString("en-IN") + '<small>/hr</small></strong>' +
+              '<button class="icon-button subtle admin-remove" data-remove-location="' + escHtml(key) + '" aria-label="Remove ' + escHtml(loc.name) + '"><i data-lucide="trash-2"></i></button>' +
+              '</div>';
+          }).join("")
+        : '<p class="admin-empty">No locations yet — add one above.</p>';
+    }
+
+    updateAdminMetrics();
+    refreshIcons();
+  }
+
+  function saveBays() { writeStore(STORE_BAYS, KNOWN_SLOTS); }
+
+  function removeBay(id) {
+    var i = KNOWN_SLOTS.indexOf(id);
+    if (i === -1) return;
+    KNOWN_SLOTS.splice(i, 1);
+    saveBays();
+    if (selectedSlot === id) selectedSlot = null;
+    renderSlots();
+    updateSummary();
+    renderAdminConsole();
+    showToast("Bay " + id + " removed.");
+  }
+
+  function removeLocation(key) {
+    if (!LOCATIONS[key]) return;
+    if (Object.keys(LOCATIONS).length <= 1) {
+      showToast("Keep at least one location.");
+      return;
+    }
+    var name = LOCATIONS[key].name;
+    delete LOCATIONS[key];
+    saveLocations();
+    renderLocationOptions();
+    updateSummary();
+    renderAdminConsole();
+    showToast("Location “" + name + "” removed.");
+  }
+
+  var adminViewEl = $("#adminView");
+  if (adminViewEl) {
+    adminViewEl.addEventListener("click", function (event) {
+      var bayBtn = event.target.closest("[data-remove-bay]");
+      if (bayBtn) {
+        var id = bayBtn.dataset.removeBay;
+        if (confirm("Remove bay " + id + "? It will disappear from Find parking too.")) removeBay(id);
+        return;
+      }
+      var locBtn = event.target.closest("[data-remove-location]");
+      if (locBtn) {
+        var key = locBtn.dataset.removeLocation;
+        var loc = LOCATIONS[key];
+        if (loc && confirm("Remove “" + loc.name + "” from Find parking?")) removeLocation(key);
+      }
+    });
+  }
+
+  var addBayForm = $("#addBayForm");
+  if (addBayForm) {
+    addBayForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+      var input = $("#newBayId");
+      var raw = String(input.value || "").trim().toUpperCase();
+      if (!raw) return;
+      if (/^\d+$/.test(raw)) raw = "S" + raw; /* "7" → "S7" */
+      if (!/^[A-Z0-9]{1,6}$/.test(raw)) {
+        showToast("Bay IDs are 1–6 letters/numbers, e.g. S7.");
+        return;
+      }
+      if (knownSlotIds().indexOf(raw) !== -1) {
+        showToast("Bay " + raw + " already exists.");
+        return;
+      }
+      KNOWN_SLOTS.push(raw);
+      KNOWN_SLOTS.sort(function (a, b) { return a.localeCompare(b, undefined, { numeric: true }); });
+      saveBays();
+      input.value = "";
+      renderSlots();
+      updateSummary();
+      renderAdminConsole();
+      showToast("Bay " + raw + " added — it now appears in Find parking.");
+    });
+  }
+
+  var addLocationForm = $("#addLocationForm");
+  if (addLocationForm) {
+    addLocationForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+      var name = String($("#newLocName").value || "").trim();
+      var address = String($("#newLocAddress").value || "").trim();
+      var rate = parseInt($("#newLocRate").value, 10);
+      if (!name) {
+        showToast("Give the location a name.");
+        return;
+      }
+      if (isNaN(rate) || rate < 0) rate = 0;
+      var key = slugFor(name, LOCATIONS);
+      LOCATIONS[key] = { name: name, address: address, rate: rate };
+      saveLocations();
+      addLocationForm.reset();
+      renderLocationOptions();
+      updateSummary();
+      renderAdminConsole();
+      showToast("Location “" + name + "” added to Find parking.");
+    });
+  }
+
+  var adminExport = $("#adminExport");
+  if (adminExport) {
+    adminExport.addEventListener("click", function () {
+      var lines = ["type,id,state"];
+      knownSlotIds().forEach(function (id) {
+        lines.push("bay," + id + "," + tileStateFor(id) + (slotIsOnline(id) ? ",online" : ",offline"));
+      });
+      bookings.forEach(function (b) { lines.push("booking," + b.slotId + "," + b.status); });
+      var blob = new Blob([lines.join("\n")], { type: "text/csv" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "parkwise-report.csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+      showToast("Report downloaded.");
+    });
+  }
 
   var viewDetails = $(".metric-footer .text-button");
   if (viewDetails) viewDetails.addEventListener("click", function () { showToast("Booking details (demo)."); });

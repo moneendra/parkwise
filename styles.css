@@ -24,9 +24,31 @@
     linear-gradient(160deg, #f7f8f5 0%, #f1f3ee 55%, #f6f2ec 100%);
 }
 
+/* with the background video playing: dim it behind a dark cinematic shade and
+   flip the text that sits directly on the background to light tones so the
+   white cards keep their own dark-on-light styling */
 body:has(.site-background-video:not([style*="display: none"])) .site-background-shade {
   background:
-    linear-gradient(165deg, rgba(245, 246, 244, 0.86) 0%, rgba(238, 241, 236, 0.9) 60%, rgba(245, 240, 233, 0.92) 100%);
+    radial-gradient(1100px 520px at 85% -10%, rgba(255, 121, 75, 0.12), transparent 60%),
+    linear-gradient(165deg, rgba(13, 16, 24, 0.6) 0%, rgba(13, 16, 24, 0.72) 55%, rgba(8, 10, 16, 0.82) 100%);
+}
+
+body:has(.site-background-video:not([style*="display: none"])) .breadcrumb,
+body:has(.site-background-video:not([style*="display: none"])) .breadcrumb strong,
+body:has(.site-background-video:not([style*="display: none"])) .eyebrow,
+body:has(.site-background-video:not([style*="display: none"])) .lede,
+body:has(.site-background-video:not([style*="display: none"])) .section-heading h2,
+body:has(.site-background-video:not([style*="display: none"])) .section-heading p {
+  color: rgba(244, 245, 242, 0.78);
+}
+
+body:has(.site-background-video:not([style*="display: none"])) .welcome-row h1,
+body:has(.site-background-video:not([style*="display: none"])) .page-heading h1 {
+  color: #f4f5f2;
+}
+
+body:has(.site-background-video:not([style*="display: none"])) .section-heading .text-button {
+  color: #ff9d7a;
 }
 
 /* ---- app shell --------------------------------------------------------- */
@@ -1649,6 +1671,7 @@ body:has(.site-background-video:not([style*="display: none"])) .site-background-
   border-radius: 10px;
   border: 1.5px solid transparent;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   font-size: 0.72rem;
@@ -2518,4 +2541,122 @@ body:has(.site-background-video:not([style*="display: none"])) .site-background-
   .map-pin-inox {
     display: none;
   }
+}
+
+/* ---- admin console: manage bays + locations (added) --------------------- */
+
+.sensor-online span,
+.sensor-offline span {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 9px;
+  vertical-align: 2px;
+}
+.sensor-online span {
+  background: var(--green);
+  box-shadow: 0 0 0 4px rgba(31, 164, 106, 0.15);
+}
+.sensor-offline span {
+  background: var(--red);
+  box-shadow: 0 0 0 4px rgba(214, 69, 69, 0.15);
+}
+
+.admin-add-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 2px 0 12px;
+}
+.admin-add-form input {
+  flex: 1 1 130px;
+  min-width: 0;
+  background: var(--surface-soft);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+.admin-add-form input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.admin-add-form .primary-button.compact {
+  flex: 0 0 auto;
+}
+
+/* bay + location rows reuse .admin-location-row with a 3-column layout */
+.admin-manage-row {
+  grid-template-columns: minmax(150px, 1.2fr) auto 40px;
+}
+
+.admin-rate {
+  font-size: 0.95rem;
+  white-space: nowrap;
+  justify-self: end;
+}
+.admin-rate small {
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+
+.admin-remove {
+  color: var(--ink-faint);
+  transition: color 0.15s ease;
+}
+.admin-remove:hover {
+  color: var(--red);
+}
+
+.admin-empty {
+  color: var(--ink-faint);
+  font-size: 0.85rem;
+  padding: 14px 0 6px;
+}
+
+.location-status.gray-bg {
+  background: #eef0ec;
+  color: var(--ink-faint);
+}
+
+.status-pill.blue {
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+.status-pill.red {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.slot-map-empty {
+  grid-column: 1 / -1;
+  color: var(--ink-faint);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 18px 0;
+}
+
+/* the state word under each bay ID (OPEN / BOOKED / OCCUPIED / IR countdown) */
+.slot small {
+  display: block;
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+/* thumbnails for admin-added locations (cycled by position) */
+.option-image.generic-thumb {
+  background: linear-gradient(135deg, #5b7cfa, #93a9ff);
+}
+.option-image.generic-thumb-2 {
+  background: linear-gradient(135deg, #ff9d7a, #ee5a2c);
+}
+.option-image.generic-thumb-3 {
+  background: linear-gradient(135deg, #12a480, #6fd8bd);
 }

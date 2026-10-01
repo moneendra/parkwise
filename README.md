@@ -35,8 +35,12 @@ pick-your-bay booking flow, UPI payment step, booking history and an admin conso
   `serial-bridge.js` running, the chip above the map turns green
   *“IR hardware live”* and the bays follow the real HW-201 sensors.
   No hardware online? It falls back to a simulated demo automatically.
-- **Background video** — the page looks for `123456789.mp4` next to `index.html`.
-  Drop the file in to enable it; without it a clean gradient background is shown.
+- **Admin console** — sign in as `moneendra` and manage the network from the
+  sidebar: add or remove bays (each bay ID is the IR sensor ID, e.g. `S7`)
+  and add or remove locations with their ₹/hour rate. Changes apply to the
+  *Find parking* flow instantly and are saved on this device.
+- **Background video** — `car-video.mp4` plays behind the page, dimmed by a
+  dark shade so cards stay readable; without it a clean gradient is shown.
 - **UPI payment** — the payment step links to the UPI deep link in `index.html`
   (`upi://pay?…`) and reveals a *Verify payment* button, mirroring a real UPI flow.
 - Icons load from [lucide](https://lucide.dev) and fonts from Google Fonts (CDN).
@@ -48,14 +52,14 @@ normal users don't. Passwords are salted **PBKDF2-SHA256** (Web Crypto) and are
 never stored in plain text.
 
 Out of the box the site runs in **demo storage** mode: accounts live in the
-browser only, and the seeded demo admin is `admin` / `admin123`.
+browser only, and the seeded admin is `moneendra` / `Moni@2009`.
 
 To store accounts in the **real database** (your existing Supabase project):
 
 1. **Create the table** — Supabase Dashboard → SQL Editor → paste
    `supabase-setup-parkwise.sql` → Run. This creates `parkwise_users`
    with Row Level Security (the public site may only sign people up and
-   check logins) and seeds the `admin` account.
+   check logins) and seeds the `moneendra` admin account.
 2. **Paste the public key** — Supabase Dashboard → Settings → API → copy the
    **anon / publishable** key (never the secret one!) and paste it into
    `SUPABASE_ANON_KEY` at the top of `auth.js`.

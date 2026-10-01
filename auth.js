@@ -23,6 +23,10 @@
   var SESSION_KEY = "pw_session";
   var LOCAL_KEY = "pw_local_users";
 
+  /* seeded admin account (mirrors the supabase-setup-parkwise.sql seed) */
+  var ADMIN_USERNAME = "moneendra";
+  var ADMIN_PASSWORD = "Moni@2009";
+
   var sb = (SUPABASE_ANON_KEY && window.supabase && window.supabase.createClient)
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
     : null;
@@ -90,10 +94,19 @@
   /* the admin account exists in the DB seed; mirror it for local demo */
   function ensureLocalAdmin() {
     var rows = readLocal();
-    if (rows.some(function (r) { return r.username === "admin"; })) return Promise.resolve();
-    return hashPassword("admin123", randomSalt(), 100000).then(function (hash) {
-      rows.push({ username: "admin", password_hash: hash, role: "admin" });
-      writeLocal(rows);
+    var changed = false;
+    /* drop the old demo admin/admin123 seed so moneendra is the only admin */
+    var kept = rows.filter(function (r) {
+      if (r.username === "admin" && r.role === "admin") { changed = true; return false; }
+      return true;
+    });
+    if (kept.some(function (r) { return r.username === ADMIN_USERNAME; })) {
+      if (changed) writeLocal(kept);
+      return Promise.resolve();
+    }
+    return hashPassword(ADMIN_PASSWORD, randomSalt(), 100000).then(function (hash) {
+      kept.push({ username: ADMIN_USERNAME, password_hash: hash, role: "admin" });
+      writeLocal(kept);
     });
   }
 
