@@ -15,7 +15,7 @@
 </head>
 <body>
   <video class="site-background-video" autoplay muted loop playsinline preload="auto" aria-hidden="true">
-    <source src="123456789.mp4" type="video/mp4" />
+    <source src="car-video.mp4" type="video/mp4" />
   </video>
   <div class="site-background-shade" aria-hidden="true"></div>
   <div class="app-shell">
@@ -167,6 +167,7 @@
   <div class="toast" id="toast"><i data-lucide="check-circle-2"></i><span>Booking confirmed. Your spot is reserved.</span></div>
   <div class="modal-backdrop" id="paymentModal"><div class="payment-modal"><button class="modal-close icon-button" id="closePayment" aria-label="Close payment"><i data-lucide="x"></i></button><div class="payment-icon"><i data-lucide="smartphone"></i></div><p class="eyebrow">Secure UPI payment</p><h2>Pay for your spot<span class="accent">.</span></h2><p class="payment-copy">Complete payment to confirm your parking reservation.</p><div class="payment-amount"><span>Parking total</span><strong id="paymentAmount">₹60</strong></div><div class="upi-card"><div class="upi-logo">UPI</div><div><span>UPI payment</span><strong>Secure payment gateway</strong></div></div><a class="primary-button upi-pay-link" id="payButton" href="upi://pay?pa=9701368932-2">Pay with UPI <i data-lucide="arrow-up-right"></i></a><button class="primary-button verify-payment-button" id="verifyPayment" hidden>Verify payment <i data-lucide="shield-check"></i></button><p class="payment-status" id="paymentStatus">After payment, return here to verify your transaction.</p><p class="secure-note"><i data-lucide="shield-check"></i> Your slot is booked only after payment verification</p></div></div>
   <div class="modal-backdrop" id="confirmationModal"><div class="confirmation-modal"><button class="modal-close icon-button" id="closeModal" aria-label="Close"><i data-lucide="x"></i></button><div class="confirmation-check"><i data-lucide="check"></i></div><p class="eyebrow">You are all set</p><h2>Spot reserved<span class="accent">.</span></h2><p>Your parking bay is waiting for you at <strong id="confirmLocation">Central Station Garage</strong>.</p><div class="confirm-ticket"><div><span>Date & time</span><strong id="confirmTime">Wed, Sep 23 · 10:30 AM</strong></div><div><span>Parking bay</span><strong id="confirmSpot">A-24 · Level B2</strong></div><div><span>Booking ID</span><strong>PW-4928</strong></div></div><button class="primary-button" id="doneButton">Done <i data-lucide="arrow-right"></i></button></div></div>
+  <script src="auth.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

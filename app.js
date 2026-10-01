@@ -87,8 +87,7 @@
   }
 
   var quietActions = [
-    { sel: ".sidebar-bottom .nav-item:nth-of-type(1)", msg: "Settings are on the roadmap." },
-    { sel: ".sidebar-bottom .nav-item:nth-of-type(2)", msg: "Signed out — this is a demo account." }
+    { sel: ".sidebar-bottom .nav-item:nth-of-type(1)", msg: "Settings are on the roadmap." }
   ];
   quietActions.forEach(function (action) {
     var btn = $(action.sel);

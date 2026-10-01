@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f5f6f4" />
+  <title>Parkwise | Sign in</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="theme.css" />
+  <link rel="stylesheet" href="auth.css" />
+</head>
+<body>
+  <video class="auth-video" autoplay muted loop playsinline preload="auto" aria-hidden="true">
+    <source src="car-video.mp4" type="video/mp4" />
+  </video>
+  <div class="auth-shade" aria-hidden="true"></div>
+
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-brand"><span class="brand-mark">P</span>parkwise<span style="color:var(--accent)">.</span></div>
+
+      <h1 id="authTitle">Welcome back<span style="color:var(--accent)">.</span></h1>
+      <p class="auth-lede" id="authLede">Sign in to reach your parking, already one step ahead.</p>
+
+      <div class="auth-tabs" id="authTabs">
+        <button type="button" class="active" data-tab="signin">Sign in</button>
+        <button type="button" data-tab="signup">Create account</button>
+      </div>
+
+      <form id="authForm" novalidate>
+        <label class="auth-field"><span>Username</span>
+          <input id="username" name="username" autocomplete="username" required minlength="3" maxlength="24" placeholder="e.g. moni" />
+        </label>
+        <label class="auth-field"><span>Password</span>
+          <input id="password" name="password" type="password" autocomplete="current-password" required minlength="6" placeholder="••••••••" />
+        </label>
+
+        <div id="roleRow" class="auth-field">
+          <span>Sign in as</span>
+          <div class="auth-role-group">
+            <label class="auth-role active"><input type="radio" name="role" value="user" checked />User</label>
+            <label class="auth-role"><input type="radio" name="role" value="admin" />Admin</label>
+          </div>
+        </div>
+
+        <button class="auth-submit" id="submitBtn" type="submit">Sign in</button>
+        <p class="auth-status" id="authStatus"></p>
+      </form>
+
+      <div class="auth-note" id="dbNote" hidden>
+        <strong>Demo storage</strong>
+        Supabase isn't linked yet, so accounts are stored on this device only.
+        Paste your anon key into <code>auth.js</code> (see README) to store them in the database.
+      </div>
+
+      <p class="auth-hint" id="seedHint" hidden>Demo admin — username <strong>admin</strong>, password <strong>admin123</strong></p>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="auth.js"></script>
+  <script>
+    (function () {
+      "use strict";
+      var tab = "signin";
+      var els = {
+        tabs: document.getElementById("authTabs"),
+        title: document.getElementById("authTitle"),
+        lede: document.getElementById("authLede"),
+        form: document.getElementById("authForm"),
+        username: document.getElementById("username"),
+        password: document.getElementById("password"),
+        roleRow: document.getElementById("roleRow"),
+        submit: document.getElementById("submitBtn"),
+        status: document.getElementById("authStatus"),
+        note: document.getElementById("dbNote"),
+        seedHint: document.getElementById("seedHint")
+      };
+
+      if (!window.PWAuth.configured()) {
+        els.note.hidden = false;
+        els.seedHint.hidden = false;
+      }
+
+      function setTab(next) {
+        tab = next;
+        Array.prototype.forEach.call(els.tabs.children, function (b) {
+          b.classList.toggle("active", b.dataset.tab === next);
+        });
+        var signup = next === "signup";
+        els.title.innerHTML = signup
+          ? 'Create your account<span style="color:var(--accent)">.</span>'
+          : 'Welcome back<span style="color:var(--accent)">.</span>';
+        els.lede.textContent = signup
+          ? "New here? Make a user account and park smarter in minutes."
+          : "Sign in to reach your parking, already one step ahead.";
+        els.roleRow.style.display = signup ? "none" : "";
+        els.submit.textContent = signup ? "Create account" : "Sign in";
+        els.status.textContent = "";
+        els.status.className = "auth-status";
+      }
+
+      Array.prototype.forEach.call(els.tabs.children, function (b) {
+        b.addEventListener("click", function () { setTab(b.dataset.tab); });
+      });
+
+      Array.prototype.forEach.call(document.querySelectorAll(".auth-role"), function (label) {
+        label.addEventListener("change", function () {
+          Array.prototype.forEach.call(document.querySelectorAll(".auth-role"), function (other) {
+            other.classList.toggle("active", other.querySelector("input").checked);
+          });
+        });
+      });
+
+      els.form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        els.status.textContent = "";
+        els.status.className = "auth-status";
+        els.submit.disabled = true;
+        els.submit.textContent = tab === "signup" ? "Creating account…" : "Signing in…";
+
+        var role = tab === "signup"
+          ? null
+          : (document.querySelector('input[name="role"]:checked') || {}).value;
+
+        var call = tab === "signup"
+          ? window.PWAuth.signup(els.username.value, els.password.value)
+          : window.PWAuth.login(els.username.value, els.password.value, role);
+
+        call.then(function (account) {
+          window.PWAuth.saveSession(account);
+          els.status.className = "auth-status ok";
+          els.status.textContent = tab === "signup" ? "Account created — taking you in…" : "Signed in — taking you in…";
+          setTimeout(function () { location.href = "index.html"; }, 500);
+        }).catch(function (err) {
+          els.status.className = "auth-status error";
+          els.status.textContent = err && err.message ? err.message : "Something went wrong.";
+          els.submit.disabled = false;
+          els.submit.textContent = tab === "signup" ? "Create account" : "Sign in";
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
